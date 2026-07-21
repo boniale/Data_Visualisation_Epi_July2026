@@ -1,0 +1,122 @@
+/*-- scss:defaults --*/
+
+$presentation-heading-color: #00507f;
+$presentation-heading-font-weight: 800;
+$presentation-font-size-root: 32px;
+$link-color: #2f8f2f;
+$body-bg: #ffffff;
+$body-color: #111111;
+
+/*-- scss:rules --*/
+
+.reveal .slide-logo {
+  max-height: none !important;
+  height: 100px !important;
+  width: auto !important;
+
+  top: 8px !important;
+  right: 8px !important;
+}
+
+
+html.no-logo .reveal .slide-logo {
+  display: none !important;
+}
+
+
+.reveal .footer {
+  color: #00507f;
+  font-size: 0.45em;
+  font-weight: 600;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+  color: #00507f;
+}
+
+.reveal h2 {
+  border-bottom: 2px solid #3f9c35;
+  padding-bottom: 0.25em;
+}
+
+.reveal strong {
+  color: #2f8f2f;
+}
+
+.reveal code {
+  color: #00507f;
+}
+
+.closing-slide {
+  text-align: center;
+}
+
+.closing-logo {
+  width: 220px;
+}
+
+.closing-slide h1 {
+  color: #000000;
+  font-size: 1.7em;
+  line-height: 1.05;
+}
+
+
+.closing-slide {
+  text-align: center;
+}
+
+.closing-slide h3 {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  line-height: 1.1;
+  color: #00507F;
+}
+
+.closing-slide p {
+  font-size: 0.75em;
+}
+
+.closing-slide img {
+  margin-bottom: 0.5em;
+}
+
+/* --- pedagogical callout boxes (added for Data Viz & Big Data deck) --- */
+.reveal .yourturn {
+  background: #fff6e5;
+  border-left: 6px solid #E69F00;
+  border-radius: 6px;
+  padding: 0.5em 0.9em;
+  margin: 0.4em 0;
+}
+.reveal .predict {
+  background: #eef7ec;
+  border-left: 6px solid #3f9c35;
+  border-radius: 6px;
+  padding: 0.5em 0.9em;
+  margin: 0.4em 0;
+}
+.reveal .keyidea {
+  background: #e8f1f8;
+  border-left: 6px solid #00507f;
+  border-radius: 6px;
+  padding: 0.5em 0.9em;
+  margin: 0.4em 0;
+}
+.reveal .optional {
+  display: inline-block;
+  font-size: 0.5em;
+  font-weight: 700;
+  color: #ffffff;
+  background: #E69F00;
+  border-radius: 10px;
+  padding: 1px 9px;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+.reveal .small  { font-size: 0.72em; }
+.reveal .muted  { color: #5b6b78; }
+.reveal .center { text-align: center; }
+.reveal .html-widget { margin: 0 auto !important; }

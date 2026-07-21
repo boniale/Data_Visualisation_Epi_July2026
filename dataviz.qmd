@@ -1,0 +1,571 @@
+---
+title: "Data Visualisation in Epidemiology"
+subtitle: "A practical, interactive session with R and Quarto"
+author: "Dr. Boni Ale, MD, MSc, MPH"
+date: today
+format:
+  revealjs:
+    theme: [simple, holo-theme.scss]
+    slide-number: true
+    chalkboard: true
+    code-line-numbers: true
+    preview-links: auto
+    footer: "https://research.holohc.org/"
+    logo: "logo.png"
+    title-slide-attributes:
+      data-background-image: "logo.png"
+      data-background-size: contain
+      data-background-opacity: "0.02"
+    include-after-body:
+      text: |
+        <script>
+        function toggleLogo(event) {
+          const logo = document.querySelector('.slide-logo');
+          if (!logo) return;
+          if (event.currentSlide.classList.contains('closing-slide')) {
+            logo.style.display = 'none';
+          } else {
+            logo.style.display = 'block';
+          }
+        }
+        Reveal.on('ready', toggleLogo);
+        Reveal.on('slidechanged', toggleLogo);
+        </script>
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+  freeze: auto
+knitr:
+  opts_chunk:
+    dev: "png"
+    dpi: 150
+    fig.align: "center"
+---
+
+```{r}
+#| label: setup
+#| include: false
+#| cache: false
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(plotly)
+  library(DT)
+  library(leaflet)
+  library(sf)
+  library(viridis)
+  library(scales)
+  library(patchwork)
+})
+# Holo palette ------------------------------------------------------------
+holo_navy  <- "#00507F"
+holo_green <- "#3F9C35"
+# colour-blind-safe categorical set (Okabe-Ito based), Holo colours first
+holo_pal <- c("#00507F", "#3F9C35", "#E69F00", "#56B4E9", "#CC79A7", "#999999")
+
+theme_set(
+  theme_minimal(base_size = 14) +
+    theme(
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.title       = element_text(face = "bold", colour = holo_navy)
+    )
+)
+```
+
+## Our Roadmap {.smaller}
+
+::: {.keyidea}
+**One claim:** a figure is an *argument*. Every layer is a choice that either clarifies or distorts the epidemiology.
+:::
+
+
+
+| Section | Focus |
+|---|---|
+| **Principles** | communication → audience–message–evidence → perception hierarchy → choosing a chart |
+| **Grammar of graphics** | the ~7 components that compose every `ggplot2` figure |
+| **Core epi charts** | epicurve · forest · Kaplan–Meier · choropleth |
+| **Honest design** | colour, the honesty checklist, accessibility |
+
+::: {.muted .small}
+Slides are **interactive** — hover, zoom and drag the live charts. Code is shown so you can reuse it. Boxes marked [APPENDIX]{.optional} are bonus material for the repo.
+:::
+
+## How this session works {.smaller}
+
+::: {.predict}
+**Predict** — before each demo I'll ask what the chart will look like. Commit to an answer.
+:::
+
+::: {.yourturn}
+**Your turn** — short challenges you can run in your own RStudio from the companion `exercises.R`.
+:::
+
+We assume you're comfortable with the tidyverse and **`ggplot2`**. We go fast on basics and spend our time on the epidemiological judgement calls.
+
+# 1 · Principles of data visualisation {background-color="#00507F"}
+
+## Why visualisation matters {.smaller}
+
+**Icebreaker — which graph would you trust?** Turn to a neighbour:
+
+- Which chart looks more convincing?
+- Which is easier to understand?
+- Which could be misleading?
+
+The brain detects **position, colour, contrast, shape and movement** far faster than it reads a table of numbers.
+
+::: {.callout-tip}
+Good visualisations *reduce thinking effort*. That is the whole job.
+:::
+
+## A figure is communication, not decoration {.smaller}
+
+A good visualisation answers three questions:
+
+1. **What is the question?**
+2. **What should the audience notice?**
+3. **What interpretation or action should follow?**
+
+::: {.callout-note}
+Start with the **message**, then choose the chart — never the other way round.
+:::
+
+## The audience–message–evidence triangle {.smaller}
+
+A strong data story connects three things:
+
+- **Audience** — who needs this information?
+- **Message** — what is the single main point?
+- **Evidence** — which data supports that point?
+
+> *Weak:* "Here is a plot of cases by week."
+>
+> *Stronger:* "Cases rose sharply in the **North** district, peaking in **week 7**."
+
+::: {.keyidea}
+The title is where the message lives. If your title just names the axes, you've wasted it.
+:::
+
+## Bad graphs bingo {.smaller}
+
+Which problems do you spot in the wild?
+
+- Too many colours · 3-D effects · tiny labels
+- No message · truncated or distorted axes · overloaded dashboards
+
+::: {.callout-warning}
+A graph can be **technically correct and still communicate poorly**. Correctness is necessary, not sufficient.
+:::
+
+## Exploratory vs explanatory {.smaller}
+
+| Exploratory | Explanatory |
+|---|---|
+| Used *during* analysis | Used for *communication* |
+| Many variables, dense | One focused message |
+| Analyst-facing | Audience-facing |
+| Speed over polish | Polish and clarity |
+
+::: {.muted .small}
+Most of today's craft is about turning *exploratory* plots into *explanatory* ones.
+:::
+
+## How the eye compares — the perception hierarchy {.smaller}
+
+Humans judge these from **most** to **least** accurate:
+
+1. **Position** → 2. **Length** → 3. Direction / angle → 4. Area → 5. Colour intensity → 6. Volume
+
+::: {.keyidea}
+Map your **most important quantity** to **position or length**. This is exactly why pie charts (angle/area) are hard to read and stacked bars beyond 2–3 categories get muddy.
+:::
+
+| Data feature | Best encoding |
+|---|---|
+| Quantity | Position, length |
+| Category | Colour, shape, position |
+| Time | Position on x-axis |
+| Uncertainty | Interval, band, transparency |
+
+## Choosing the right chart {.smaller}
+
+| Your task | Reach for |
+|---|---|
+| Compare categories | Bar chart (ordered) |
+| Show change over time | Line chart |
+| Show a distribution | Histogram / boxplot / density |
+| Show a relationship | Scatter (or hexbin if big) |
+| Show composition | Stacked bar — sparingly |
+
+::: {.predict}
+**Hold this list.** For each epi chart we build next, ask: *which task is it solving?*
+:::
+
+# 2 · The grammar of graphics {background-color="#00507F"}
+
+## Theory worth five minutes {.smaller}
+
+These principles become **reproducible** in `ggplot2` through the grammar of graphics.
+
+Every statistical graphic is the same recipe (Wilkinson; Wickham). A plot =
+
+> **data** → **aesthetic mappings** (x, y, colour, size…) → **geometry** → **scales** → **facets** → **coordinates** → **theme**
+
+::: {.keyidea}
+You don't memorise 200 chart "types". You compose ~7 components. Change one component, get a new chart — *for the same data and the same question*.
+:::
+
+```r
+ggplot(data) +
+  aes(x = ..., y = ..., colour = ...) +   # mappings
+  geom_point() +                          # geometry
+  scale_colour_viridis_d() +              # scales
+  facet_wrap(~ group) +                   # small multiples
+  coord_cartesian() +                     # coordinates
+  theme_minimal()                         # non-data ink
+```
+
+## One dataset, three arguments {.smaller}
+
+Same numbers, three geometries — three different stories. Which is *honest* depends on the question.
+
+```{r}
+#| label: gog-three
+#| fig-height: 4.0
+#| code-fold: true
+#| code-summary: "Show code"
+set.seed(1)
+d <- tibble(
+  arm = rep(c("Intervention", "Control"), each = 60),
+  outcome = c(rnorm(60, 4.2, 1.1), rnorm(60, 4.8, 1.2))
+)
+p_box <- ggplot(d, aes(arm, outcome, fill = arm)) +
+  geom_boxplot(alpha = .85) + scale_fill_manual(values = holo_pal) +
+  labs(title = "Boxplot: summary", x = NULL, y = "Biomarker") +
+  theme(legend.position = "none")
+p_jit <- ggplot(d, aes(arm, outcome, colour = arm)) +
+  geom_jitter(width = .15, alpha = .7) + scale_colour_manual(values = holo_pal) +
+  labs(title = "Jitter: every patient", x = NULL, y = NULL) +
+  theme(legend.position = "none")
+p_den <- ggplot(d, aes(outcome, fill = arm)) +
+  geom_density(alpha = .6) +
+  scale_fill_manual(values = holo_pal, name = "Trial arm") +
+  labs(title = "Density: distributions", x = "Biomarker", y = "Density") +
+  theme(legend.position = "bottom")
+(p_box + p_jit + p_den) +
+  plot_annotation(
+    caption = "Simulated two-arm trial, n = 60 per arm — identical data, three geometries.")
+```
+
+::: {.muted .small}
+*Why the density panel needs a legend:* the boxplot and jitter label each arm on the **x-axis**, so colour is redundant — but the density overlays both arms on one axis, so **colour is the only cue** and a legend is essential. Default choices are never neutral.
+:::
+
+## Your turn {.smaller}
+
+::: {.yourturn}
+**Your turn (2 min).** Keep the *mapping* identical but swap the geometry to `geom_violin()`. What does a violin add over a boxplot, and what does it still hide?
+:::
+
+::: {.predict}
+**Predict:** will the violin reveal the spread of each arm better than the box? Will it show individual patients?
+:::
+
+# 3 · Charts every epidemiologist needs {background-color="#00507F"}
+
+## The epidemic curve {.smaller}
+
+The first figure in almost every outbreak report. Data: the simulated Ebola line list from **`outbreaks`** — a real-shaped epidemic.
+
+```{r}
+#| label: epicurve-data
+ebola <- outbreaks::ebola_sim_clean$linelist |>
+  as_tibble() |>
+  filter(!is.na(date_of_onset)) |>
+  mutate(week = lubridate::floor_date(date_of_onset, "week"))
+
+epicurve <- ebola |> count(week, gender, name = "cases")
+glimpse(epicurve)
+```
+
+## Epicurve — one line gives you interactivity {.smaller .scrollable}
+
+::: {.predict}
+**Predict:** single epidemic peak, or several waves?
+:::
+
+```{r}
+#| label: epicurve-plot
+#| fig-height: 4.2
+#| out-width: "100%"
+g <- ggplot(epicurve, aes(week, cases, fill = gender)) +
+  geom_col() +
+  scale_fill_manual(values = holo_pal, name = "Sex") +
+  scale_x_date(date_breaks = "3 months", date_labels = "%b %Y") +
+  labs(title = "Ebola simulated outbreak — weekly onsets",
+       x = "Week of onset", y = "Cases") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplotly(g, height = 400, width = 920) |>
+  layout(
+    margin = list(l = 60, r = 25, b = 100, t = 50),
+    legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.45),
+    xaxis  = list(automargin = TRUE, tickangle = -45, title = "Week of onset"),
+    yaxis  = list(automargin = TRUE)
+  ) |>
+  config(displayModeBar = FALSE)
+```
+
+::: {.muted .small}
+*Source:* `outbreaks::ebola_sim_clean` — simulated Ebola line list. Legend = sex; one `ggplotly()` call adds hover and zoom.
+:::
+
+## Onset vs report: the x-axis is a decision {.smaller .optional-slide}
+
+[APPENDIX]{.optional}
+
+::: {.keyidea}
+**Onset date** reconstructs transmission; **report date** reflects surveillance effort. Same cases, different epidemic.
+:::
+
+```{r}
+#| label: onset-vs-report
+#| fig-height: 3.7
+#| code-fold: true
+#| code-summary: "Show code"
+cmp <- ebola |>
+  transmute(Onset = date_of_onset,
+            Report = date_of_onset + sample(0:21, n(), replace = TRUE)) |>
+  pivot_longer(everything(), names_to = "basis", values_to = "date") |>
+  mutate(week = lubridate::floor_date(date, "week")) |>
+  count(basis, week)
+
+ggplot(cmp, aes(week, n, colour = basis)) +
+  geom_line(linewidth = 1) +
+  scale_colour_manual(values = holo_pal, name = "Date basis") +
+  labs(title = "Same cases, two time axes", x = NULL, y = "Cases",
+       caption = "Report dates simulated as onset + 0–21 days, for illustration.")
+```
+
+## Forest plots — effect estimates {.smaller}
+
+The canonical meta-analysis figure. Data: the classic **BCG vaccine vs tuberculosis** trials (Colditz 1994), embedded so it always runs.
+
+```{r}
+#| label: forest-data
+bcg <- tribble(
+  ~trial,                 ~year, ~tpos, ~tneg,  ~cpos, ~cneg,
+  "Stein & Aronson",      1933,  180,  1361,  372,  1079,
+  "Ferguson & Simes",     1949,   17,  1699,   65,  1600,
+  "Rosenthal et al",      1960,    3,   227,   11,   228,
+  "Hart & Sutherland",    1977,   62, 13536,  248, 12619,
+  "Frimodt-Moller et al", 1973,   33,  5036,   47,  5761,
+  "Coetzee & Berjak",     1968,   28,  7470,   45,  7232,
+  "Rosenthal et al (2)",  1961,    8,  2537,   29,  2243,
+  "Comstock et al",       1974,  186, 88391,  141, 88401
+) |>
+  mutate(
+    rr = (tpos/(tpos+tneg)) / (cpos/(cpos+cneg)),
+    se = sqrt(1/tpos - 1/(tpos+tneg) + 1/cpos - 1/(cpos+cneg)),
+    lo = exp(log(rr) - 1.96*se),
+    hi = exp(log(rr) + 1.96*se)
+  )
+```
+
+## A forest plot is just `geom_pointrange` {.smaller}
+
+```{r}
+#| label: forest-plot
+#| fig-height: 4.2
+bcg |>
+  mutate(trial = fct_reorder(trial, rr)) |>
+  ggplot(aes(rr, trial)) +
+  geom_vline(xintercept = 1, linetype = 2, colour = "grey50") +
+  geom_pointrange(aes(xmin = lo, xmax = hi),
+                  colour = holo_navy, linewidth = .8, fatten = 3) +
+  scale_x_log10(breaks = c(0.2, 0.5, 1, 2)) +
+  labs(title = "BCG protection against TB varies markedly across trials",
+       subtitle = "Risk ratio with 95% CI · log scale · dashed line = no effect (RR = 1)",
+       x = "Risk ratio (vaccinated vs control)", y = NULL,
+       caption = "Source: Colditz et al. 1994 BCG meta-analysis (8 trials). RR < 1 favours vaccination.")
+```
+
+::: {.keyidea}
+Three honesty rules: **log scale** for ratios, **reference line at 1**, **CI width visible**.
+:::
+
+## Survival curves {.smaller}
+
+Kaplan–Meier from **`survival::lung`** (NCCTG lung cancer). Time-to-event is the epidemiologist's bread and butter.
+
+```{r}
+#| label: km-fit
+library(survival)
+lung2 <- survival::lung |>
+  mutate(sex = factor(sex, labels = c("Male", "Female")))
+fit <- survfit(Surv(time, status) ~ sex, data = lung2)
+km  <- broom::tidy(fit) |> mutate(sex = sub("sex=", "", strata))
+head(km, 3)
+```
+
+## KM — interactive, with confidence bands {.smaller .scrollable}
+
+::: {.predict}
+**Predict:** which curve sits higher — male or female survival?
+:::
+
+```{r}
+#| label: km-plot
+#| fig-height: 4.0
+gk <- ggplot(km, aes(time, estimate, colour = sex, fill = sex)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .15, colour = NA) +
+  geom_step(linewidth = 1) +
+  scale_colour_manual(values = holo_pal, name = NULL, aesthetics = c("colour","fill")) +
+  scale_y_continuous(labels = percent, limits = c(0, 1)) +
+  labs(title = "Lung cancer survival by sex (Kaplan–Meier)",
+       x = "Days", y = "Survival probability")
+ggplotly(gk, height = 400, width = 900) |>
+  layout(
+    margin = list(l = 65, r = 25, b = 70, t = 50),
+    legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.25),
+    xaxis  = list(automargin = TRUE),
+    yaxis  = list(automargin = TRUE)
+  ) |>
+  config(displayModeBar = FALSE)
+```
+
+::: {.muted .small}
+*Source:* `survival::lung` (NCCTG). Lines = Kaplan–Meier estimate; shaded bands = 95% CI; legend = sex.
+:::
+
+## Maps — the choropleth {.smaller}
+
+The workshop is in Africa, so let's map Africa. Geometry from **`rnaturalearth`**; incidence simulated so it's self-contained.
+
+```{r}
+#| label: map-data
+africa <- rnaturalearth::ne_countries(
+  continent = "Africa", scale = "medium", returnclass = "sf")
+set.seed(42)
+africa <- africa |> mutate(incidence = round(runif(n(), 5, 400), 0))
+```
+
+::: {.keyidea}
+**Choropleth trap:** colour encodes a *rate*, but the eye reads *area*. Big sparse countries look like big problems. Map rates, never counts — and say so.
+:::
+
+## Interactive choropleth with `leaflet` {.smaller}
+
+```{r}
+#| label: leaflet-map
+#| fig-height: 4.4
+pal <- colorNumeric("viridis", domain = africa$incidence)
+leaflet(africa, height = 410) |>
+  addProviderTiles("CartoDB.Positron") |>
+  addPolygons(
+    fillColor = ~pal(incidence), weight = 1, color = "#ffffff", fillOpacity = 0.85,
+    label = ~sprintf("%s: %d / 100k", name, incidence),
+    highlightOptions = highlightOptions(weight = 2, color = holo_navy, bringToFront = TRUE)) |>
+  addLegend(pal = pal, values = ~incidence, title = "Cases / 100k", position = "bottomleft")
+```
+
+::: {.muted .small}
+*Geometry:* `rnaturalearth`. **Incidence values are simulated for illustration — not real surveillance data.** Colour legend = cases per 100,000; hover a country for its value.
+:::
+
+# 4 · Design that survives review {background-color="#00507F"}
+
+## Colour is not decoration {.smaller}
+
+```{r}
+#| label: colour-demo
+#| fig-height: 3.6
+#| code-fold: true
+#| code-summary: "Show code"
+df <- expand_grid(x = 1:20, y = 1:20) |> mutate(z = x * y)
+bar <- guide_colourbar(barwidth = 9, barheight = .5, title.position = "top")
+bad  <- ggplot(df, aes(x, y, fill = z)) + geom_raster() +
+  scale_fill_gradientn(colours = rainbow(7), name = "Value (x × y)", guide = bar) +
+  labs(title = "Rainbow: false edges, not CVD-safe", x = "x", y = "y") +
+  theme(legend.position = "bottom")
+good <- ggplot(df, aes(x, y, fill = z)) + geom_raster() +
+  scale_fill_viridis_c(name = "Value (x × y)", guide = bar) +
+  labs(title = "Viridis: perceptually uniform + CVD-safe", x = "x", y = "y") +
+  theme(legend.position = "bottom")
+(bad + good) +
+  plot_annotation(
+    caption = "Identical data and identical value range — only the colour scale differs.")
+```
+
+::: {.keyidea}
+Use **viridis** (sequential) or **ColorBrewer** (categorical). ~8% of men have red–green colour deficiency — rainbow scales fail them and invent boundaries that aren't in the data.
+:::
+
+## The honesty checklist {.smaller}
+
+Before any figure leaves your laptop:
+
+- **Y-axis:** starts at zero? If truncated, is it justified and labelled?
+- **Rates vs counts:** is the denominator visible?
+- **Uncertainty:** are CIs / intervals shown, not hidden?
+- **Scale:** linear vs log chosen for a reason?
+- **Encoding:** is the key comparison the *easiest* to see? (position > length > angle > area > colour)
+- **Accessibility:** survives greyscale and colour-blind simulation?
+
+::: {.muted .small}
+`colorblindr::cvd_grid(your_plot)` simulates three types of colour-blindness in one call.
+:::
+
+## Before we wrap — your turn {.smaller}
+
+::: {.yourturn}
+**Your turn (3 min).** `exercises.R` has a deliberately misleading bar chart (truncated y-axis, counts not rates, rainbow fill). Fix all three and note how the *conclusion* changes.
+:::
+
+# Wrap-up {background-color="#00507F"}
+
+## What to take home {.smaller}
+
+**Visualisation**
+
+- A chart is an argument — the grammar of graphics makes the choices explicit.
+- Start with the **message**, then choose the chart — never the other way round.
+- Master four epi charts: **epicurve, forest, Kaplan–Meier, choropleth**.
+- Honesty checklist + viridis = figures that survive review.
+
+## Resources {.smaller}
+
+- **`ggplot2`** book — Wickham, *Elegant Graphics for Data Analysis* (free online)
+- **The Epidemiologist R Handbook** — epirhandbook.com
+- **Fundamentals of Data Visualization** — Wilke (free online)
+- **R Graphics Cookbook** — Chang (free online)
+
+## {.closing-slide}
+
+![](logo.png){.closing-logo}
+
+<h1>Thank you</h1>
+
+<h3>Questions &amp; discussion</h3>
+
+Dr. Boni Ale, MD, MSc, MPH
+
+# Appendix {background-color="#00507F"}
+
+## [APPENDIX]{.optional} Forest-plot heterogeneity {.smaller}
+
+BCG efficacy famously varies with latitude. In `exercises.R`, map trial **latitude** to point colour — do high-latitude trials show stronger protection (RR further below 1)?
+
+```{r}
+#| label: forest-lat-note
+#| echo: true
+#| eval: false
+bcg |>
+  mutate(trial = fct_reorder(trial, rr)) |>
+  ggplot(aes(rr, trial, colour = lat)) +
+  geom_pointrange(aes(xmin = lo, xmax = hi)) +
+  scale_x_log10() + scale_colour_viridis_c(name = "Latitude")
+```
