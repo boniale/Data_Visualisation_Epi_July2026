@@ -4,7 +4,8 @@
 pkgs <- c(
   "tidyverse", "plotly", "DT", "leaflet", "sf",
   "viridis", "scales", "patchwork", "broom", "lubridate", "forcats",
-  "outbreaks", "survival", "rnaturalearth", "rnaturalearthdata"
+  "outbreaks", "survival", "rnaturalearth", "rnaturalearthdata",
+  "rsconnect"
 )
 
 to_install <- setdiff(pkgs, rownames(installed.packages()))
