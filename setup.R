@@ -13,10 +13,11 @@ if (length(to_install)) {
   install.packages(to_install)
 }
 
-# Pin rlang to 1.1.4 (kept explicit for the Posit Connect deployment manifest).
-# Run this locally BEFORE `rsconnect::deploy*()` / writeManifest so the manifest
-# captures rlang 1.1.4 rather than whatever version is otherwise installed.
-rlang_target <- "1.1.4"
+# Pin rlang to 1.3.0 (Posit Connect Cloud publishing requires rlang >= 1.3.0).
+# IMPORTANT: rlang cannot be upgraded while it is loaded in a session. If rlang
+# is already attached, RESTART R (Session > Restart R) and run this FIRST, before
+# loading tidyverse / rsconnect, then publish.
+rlang_target <- "1.3.0"
 if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
 if (!requireNamespace("rlang", quietly = TRUE) ||
     as.character(packageVersion("rlang")) != rlang_target) {
